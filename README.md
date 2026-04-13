@@ -55,18 +55,20 @@ claude-local -c                                     # continue last conversation
 
 ## Recommended models by RAM
 
-Pick the best model for your machine. Rule of thumb: the model should use **~70% of your RAM** to leave room for macOS and the KV cache.
+Pick the best model for your machine. **Runtime RAM is significantly larger than model file size** due to the KV cache, tokenizer, and framework overhead. The numbers below are **real-world measurements**, not just file sizes. Rule of thumb: budget 50-80% more RAM than the on-disk weight size.
 
-| RAM | Recommended Model | Params | Quant | ~Size | Comparable to | Benchmark basis |
-|-----|-------------------|--------|-------|-------|---------------|-----------------|
-| **8 GB** | `mlx-community/Qwen2.5-Coder-3B-Instruct-4bit` | 3B dense | 4-bit | ~2.5 GB | GPT-3.5 Turbo (older) | Aider Edit: ~39% vs GPT-3.5's ~50% |
-| **16 GB** | `mlx-community/Qwen2.5-Coder-7B-Instruct-4bit` | 7B dense | 4-bit | ~4.5 GB | GPT-4o-mini | Aider Edit: ~58% vs 4o-mini's 56% |
-| **24 GB** | `mlx-community/Gemma-4-26b-a4b-it-4bit` | 26B MoE (4B active) | 4-bit | ~15 GB | GPT-4o (code gen) | HumanEval: 88% vs GPT-4o's ~87%; LiveCodeBench: 77% |
-| **32 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-4bit` | 32B dense | 4-bit | ~18.5 GB | GPT-4o (editing) | Aider Edit: 71% vs GPT-4o's 73% |
-| **48 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-8bit` | 32B dense | 8-bit | ~34 GB | GPT-4o (near-lossless) | Same model, 8-bit ~= full precision on MLX |
-| **64 GB** | `mlx-community/Qwen3-Coder-Next-8bit` | 80B MoE (3B active) | 8-bit | ~45 GB | Claude 3.5 Sonnet (Oct '24) | Aider Polyglot: 50% vs Sonnet 3.5's 52%; SWE-bench: 71-74% |
-| **96 GB** | `mlx-community/Devstral-2-123B-Instruct-2512-4bit` | 123B dense | 4-bit | ~65 GB | GPT-4.1 / Claude 3.5 Sonnet | SWE-bench Verified: ~70% (4-bit) |
-| **128 GB** | `mlx-community/Devstral-2-123B-Instruct-2512-8bit` | 123B dense | 8-bit | ~90 GB | Claude Sonnet 4 (no thinking) | SWE-bench Verified: 72.2% vs Sonnet 4's 56% (no think) |
+| RAM | Recommended Model | Quant | Runtime RAM | tok/s (M4 Max) | Comparable to | Benchmark basis |
+|-----|-------------------|-------|-------------|----------------|---------------|-----------------|
+| **8 GB** | `mlx-community/Qwen2.5-Coder-3B-Instruct-4bit` | 4-bit | ~3-4 GB | ~200 | GPT-3.5 Turbo (older) | Aider Edit: ~39% vs GPT-3.5's ~50% |
+| **16 GB** | `mlx-community/Qwen2.5-Coder-7B-Instruct-4bit` | 4-bit | ~7-8 GB | ~90 | GPT-4o-mini | Aider Edit: ~58% vs 4o-mini's 56% |
+| **24 GB** | `mlx-community/Gemma-4-26b-a4b-it-4bit` | 4-bit | ~17-20 GB | ~110 (MoE) | GPT-4o (code gen) | HumanEval: 88%; LiveCodeBench: 77% |
+| **32 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-4bit` | 4-bit | ~25-30 GB | ~14-30 | GPT-4o (editing) | Aider Edit: 71% vs GPT-4o's 73% |
+| **48 GB** | `mlx-community/Qwen3-Coder-Next-4bit` | 4-bit | ~40-46 GB | ~40-60 (MoE) | Claude 3.5 Sonnet (Oct '24) | Aider Polyglot: 50% vs Sonnet 3.5's 52% |
+| **64 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-8bit` | 8-bit | ~33 GB | ~10-14 | GPT-4o (near-lossless) | Same as 4-bit, ~0% quality loss on MLX |
+| **96 GB** | `mlx-community/Qwen3-Coder-Next-8bit` | 8-bit | **~79 GB** | ~35-50 (MoE) | Claude 3.5 Sonnet (Oct '24) | SWE-bench: 71-74%; best quality local coder |
+| **128 GB** | `mlx-community/Devstral-2-123B-Instruct-2512-4bit` | 4-bit | ~72-90 GB | ~5-8 | GPT-4.1 / Claude 3.5 Sonnet | SWE-bench Verified: ~70%. Slow but capable. |
+
+> **About tok/s:** MoE models (Gemma 4, Qwen3-Coder-Next) are much faster than dense models of similar total size because only a fraction of parameters are active per token. The tok/s column shows M4 Max figures -- scale roughly proportionally with your chip's memory bandwidth (M4 Pro ~0.5x, M3 Ultra ~1.5x, M2 Ultra ~1.5x).
 
 ### How to read the "Comparable to" column
 
@@ -76,10 +78,11 @@ These comparisons are based on **raw benchmark scores** (Aider Polyglot, SWE-ben
 
 | RAM | Alternative | Notes |
 |-----|------------|-------|
-| 24 GB | `mlx-community/Qwen3-Coder-Next-4bit` | 80B MoE, 3B active (~20 GB). Great for agentic coding. |
-| 32 GB | `mlx-community/Devstral-Small-2-24B-Instruct-2512-4bit` | 24B, ~14 GB. 68% SWE-Bench. Leaves room for other apps. |
-| 48 GB | `mlx-community/Qwen3-Coder-Next-8bit` | 80B MoE (~45 GB). Best if you prefer coding-specialist MoE over dense. |
-| 64 GB | `mlx-community/Gemma-4-31b-it-8bit` | 31B dense. 80% LiveCodeBench v6. Great general + code. |
+| 24 GB | `mlx-community/Qwen3-Coder-Next-4bit` | 80B MoE, ~40 GB runtime -- tight fit, but great for agentic coding if it fits. |
+| 32 GB | `mlx-community/Devstral-Small-2-24B-Instruct-2512-4bit` | 24B, ~20 GB runtime. 68% SWE-Bench. Leaves room for other apps. |
+| 48 GB | `mlx-community/Qwen2.5-Coder-32B-Instruct-8bit` | 32B dense (~33 GB). Near-lossless 8-bit, room for long context. |
+| 64 GB | `mlx-community/Gemma-4-31b-it-4bit` | 31B dense (~23 GB). 80% LiveCodeBench v6. Great general + code. |
+| 128 GB | `mlx-community/Qwen3-Coder-Next-8bit` | 80B MoE (~79 GB). Faster than Devstral 123B, excellent quality. |
 
 ### Example
 
