@@ -154,7 +154,7 @@ def start_proxy(model: str, port: int) -> int:
         "PORT": str(port),
         "MODEL_NAME": model,
         "API_MODEL_NAME": api_model_name,
-        "DEFAULT_MAX_TOKENS": "16384",
+        "DEFAULT_MAX_TOKENS": "65536",
         "VERBOSE": "false",
     }
 
