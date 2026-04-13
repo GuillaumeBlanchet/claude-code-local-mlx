@@ -63,9 +63,9 @@ Pick the best model for your machine. **Runtime RAM is significantly larger than
 | **16 GB** | `mlx-community/Qwen2.5-Coder-7B-Instruct-4bit` | 4-bit | ~7-8 GB | ~90 | GPT-4o-mini | Aider Edit: ~58% vs 4o-mini's 56% |
 | **24 GB** | `mlx-community/Gemma-4-26b-a4b-it-4bit` | 4-bit | ~17-20 GB | ~110 (MoE) | GPT-4o (code gen) | HumanEval: 88%; LiveCodeBench: 77% |
 | **32 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-4bit` | 4-bit | ~25-30 GB | ~14-30 | GPT-4o (editing) | Aider Edit: 71% vs GPT-4o's 73% |
-| **48 GB** | `mlx-community/Qwen3-Coder-Next-4bit` | 4-bit | ~40-46 GB | ~40-60 (MoE) | Claude 3.5 Sonnet (Oct '24) | Aider Polyglot: 50% vs Sonnet 3.5's 52% |
+| **48 GB** | `mlx-community/Qwen3-Coder-Next-4bit` | 4-bit | ~40-46 GB | ~40-60 (MoE) | Claude Sonnet 4 (no thinking) | Aider Polyglot: 50% vs Sonnet 4's 56%; SWE-bench: 71-74% |
 | **64 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-8bit` | 8-bit | ~33 GB | ~10-14 | GPT-4o (near-lossless) | Same as 4-bit, ~0% quality loss on MLX |
-| **96 GB** | `mlx-community/Qwen3-Coder-Next-8bit` | 8-bit | **~79 GB** | ~35-50 (MoE) | Claude 3.5 Sonnet (Oct '24) | SWE-bench: 71-74%; best quality local coder |
+| **96 GB** | `mlx-community/Qwen3-Coder-Next-8bit` | 8-bit | **~79 GB** | ~35-50 (MoE) | Claude Sonnet 4 (no thinking) | SWE-bench: 71-74%; best quality local coder |
 | **128 GB** | `mlx-community/Devstral-2-123B-Instruct-2512-4bit` | 4-bit | ~72-90 GB | ~5-8 | GPT-4.1 / Claude 3.5 Sonnet | SWE-bench Verified: ~70%. Slow but capable. |
 
 > **About tok/s:** MoE models (Gemma 4, Qwen3-Coder-Next) are much faster than dense models of similar total size because only a fraction of parameters are active per token. The tok/s column shows M4 Max figures -- scale roughly proportionally with your chip's memory bandwidth (M4 Pro ~0.5x, M3 Ultra ~1.5x, M2 Ultra ~1.5x).
@@ -114,7 +114,7 @@ Research shows that the harness matters **more than the model** at the frontier:
 
 In practice:
 - A **Qwen2.5-Coder-32B** that benchmarks like GPT-4o in isolation can perform closer to **Claude 3.5 Sonnet** when harnessed by Claude Code
-- A **Qwen3-Coder-Next** that benchmarks like Claude 3.5 Sonnet can approach **Claude Sonnet 4** territory with proper agentic scaffolding
+- A **Qwen3-Coder-Next** that benchmarks like Claude Sonnet 4 (no thinking) can approach **Claude Sonnet 4 (with thinking)** territory with proper agentic scaffolding
 - A **Devstral-2-123B** that benchmarks near Claude Sonnet 4 can punch into **frontier-class** effectiveness
 
 The model provides the intelligence; the harness multiplies it. You're getting both.
