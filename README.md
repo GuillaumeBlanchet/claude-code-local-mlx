@@ -121,21 +121,44 @@ The model provides the intelligence; the harness multiplies it. You're getting b
 
 ## Why MLX over Ollama?
 
-Both are great tools, but MLX has structural advantages on Apple Silicon.
+Both are valid ways to run local models with Claude Code. Here's how they compare.
 
-### Why not just use Ollama with Claude Code?
+### Ollama now works with Claude Code directly
 
-You might wonder: "Ollama v0.19+ has an MLX backend now -- can I just use that?" **No, not directly.** There are two blockers:
+As of 2026, [Ollama has native Claude Code integration](https://docs.ollama.com/integrations/claude-code). Setup is simple:
 
-1. **API incompatibility.** Claude Code speaks the **Anthropic Messages API** (`/v1/messages`). Ollama speaks the **OpenAI API** (`/v1/chat/completions`). These are fundamentally different protocols -- different request formats, different streaming events, different tool-calling schemas. A translation proxy is required no matter what.
+```bash
+ollama launch claude                              # interactive picker
+ollama launch claude --model qwen3.5              # specific model
+```
 
-2. **Model format.** Ollama uses **GGUF** models (llama.cpp format), not the native **MLX safetensors** format from `mlx-community/` on HuggingFace. Even with Ollama's MLX backend, it loads GGUF weights and converts them at runtime -- losing the benefit of MLX-native quantization formats (MXFP4, DWQ) that are optimized specifically for Apple Silicon.
+Or manually:
 
-This tool uses `mlx-lm` directly with native MLX models, bypassing both limitations.
+```bash
+export ANTHROPIC_AUTH_TOKEN=ollama
+export ANTHROPIC_API_KEY=""
+export ANTHROPIC_BASE_URL=http://localhost:11434
+claude --model qwen3.5
+```
 
-### Performance: ~2x faster inference
+Ollama now exposes an **Anthropic-compatible API**, so no translation proxy is needed. If you want the easiest setup, **Ollama is the simpler path**.
 
-MLX is purpose-built for Apple's Metal GPU. Head-to-head benchmarks on the same hardware show:
+### So why use this tool instead?
+
+This tool uses `mlx-lm` directly with native MLX models. The tradeoffs:
+
+| | **Ollama** | **This tool (mlx-lm)** |
+|---|---|---|
+| **Setup** | One command (`ollama launch claude`) | One command (`claude-local`) |
+| **Model format** | GGUF (llama.cpp format) | Native MLX safetensors |
+| **Quantization** | Q4_K_M, Q5_K_M, etc. | 2/3/4/5/6/8-bit, MXFP4, DWQ |
+| **Inference speed** | ~112 tok/s (MLX backend) | ~130 tok/s |
+| **Memory overhead** | Higher (GGUF-to-MLX conversion, HTTP layer) | Lower (zero-copy, in-process) |
+| **Model selection** | Ollama registry only | Any `mlx-community/` HuggingFace model |
+
+### Performance difference
+
+Head-to-head benchmarks on the same hardware:
 
 | Engine | Decode speed | Relative |
 |--------|-------------|----------|
@@ -146,30 +169,34 @@ MLX is purpose-built for Apple's Metal GPU. Head-to-head benchmarks on the same 
 
 *Benchmark: Qwen3.5-35B on M4 Max. Source: [antekapetanovic.com](https://antekapetanovic.com/blog/qwen3.5-apple-silicon-benchmark/)*
 
-Ollama's MLX backend closed the gap significantly, but using `mlx-lm` directly still avoids ~15-20% overhead from HTTP/JSON serialization between Ollama's server and client. For a coding agent making hundreds of API calls per session, this adds up.
+The ~15-20% speed advantage comes from:
+- **No HTTP/JSON layer** -- mlx-lm runs in-process, Ollama serializes every request/response over HTTP
+- **Native MLX models** -- loaded directly into unified memory, no GGUF-to-MLX conversion at runtime
+- **MLX-optimized quantization** -- formats like MXFP4 and DWQ are designed for Apple Silicon's Metal GPU and aren't available in GGUF
 
-### Memory: zero-copy unified memory
+For a coding agent making hundreds of API calls per session, the overhead compounds. On a 30-minute coding session, you might save 3-5 minutes of wall-clock time.
+
+### Memory efficiency
 
 MLX was designed for Apple Silicon's **unified memory architecture** (UMA):
 
 - **MLX**: Tensors live in unified memory. The GPU reads model weights in-place -- zero copy.
-- **Ollama/llama.cpp**: Originally designed for discrete GPUs, they copy data between CPU and GPU address spaces, wasting bandwidth and duplicating memory.
-- **Result**: A model that uses 20 GB in MLX can need 22-25 GB in Ollama due to buffer overhead. This matters when you're fitting a model at the edge of your RAM.
+- **Ollama**: Even with the MLX backend, Ollama uses GGUF format which requires conversion, plus the HTTP server adds buffer overhead.
+- **Result**: A model that uses 20 GB in MLX can need 22-25 GB in Ollama. This matters when you're fitting a model at the edge of your RAM.
 
-### Quantization: more options, better quality
-
-MLX supports native quantization formats optimized for Apple hardware:
-
-- **MLX**: 2/3/4/5/6/8-bit group quantization, MXFP4, DWQ (Data-Aware Weighted Quantization)
-- **Ollama**: GGUF format only (Q4_K_M, Q5_K_M, etc.)
+### Quantization quality
 
 Independent benchmarks show MLX 4-bit quantization preserves ~95-98% of full-precision quality for coding tasks. [One study on Qwen2.5-Coder](https://medium.com/@ivanfioravanti/qwen-2-5-coder-quantization-does-not-matter-aider-benchmarks-on-apple-mlx-671e6bd5252a) found "quantization does not matter" on Aider benchmarks when using MLX.
 
+MLX-native quantization (MXFP4, DWQ) tends to preserve more quality at the same bit width than GGUF equivalents because the quantization is co-designed with Apple's Metal compute kernels.
+
 ### The bottom line
 
-Ollama is simpler to set up and has a larger ecosystem. MLX gives you faster inference, better memory efficiency, and higher-quality quantization. For coding agents (where speed directly impacts productivity), MLX is the better choice on Apple Silicon.
+**Choose Ollama** if you want the simplest setup and don't mind ~15% slower inference.
 
-> Fun fact: As of Ollama v0.19, Ollama itself uses MLX under the hood on Apple Silicon -- validating MLX as the standard for local inference on Macs. But it still speaks the wrong API for Claude Code, and uses GGUF instead of native MLX models.
+**Choose this tool** if you want maximum performance, lower memory usage, access to the full `mlx-community/` model catalog on HuggingFace, and MLX-native quantization formats.
+
+> Fun fact: As of Ollama v0.19, Ollama itself uses MLX under the hood on Apple Silicon -- validating MLX as the standard for local inference on Macs.
 
 ## How it works
 
