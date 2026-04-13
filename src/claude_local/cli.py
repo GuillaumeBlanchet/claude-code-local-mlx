@@ -215,7 +215,7 @@ def main() -> None:
         help=f"HuggingFace model ID (default: {DEFAULT_MODEL})",
     )
     parser.add_argument(
-        "--port", "-p",
+        "--port",
         type=int,
         default=DEFAULT_PORT,
         help=f"Proxy port (default: {DEFAULT_PORT})",
