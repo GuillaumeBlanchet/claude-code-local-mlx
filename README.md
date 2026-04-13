@@ -2,6 +2,8 @@
 
 Run [Claude Code](https://docs.anthropic.com/en/docs/claude-code) against a local MLX model on Apple Silicon. One command, no config files.
 
+> Read the full blog post: [Run Claude Code With a Local Model on Your Mac](https://ducttapecode.com/blog/claude-code-local-mlx/article/)
+
 This tool starts a local proxy server ([claude-code-mlx-proxy](https://github.com/chand1012/claude-code-mlx-proxy)) that translates Claude Code's API calls into local MLX model inference, then launches Claude Code pointed at it.
 
 ## Prerequisites
