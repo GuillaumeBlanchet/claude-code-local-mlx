@@ -57,16 +57,20 @@ claude-local -c                                     # continue last conversation
 
 Pick the best model for your machine. Rule of thumb: the model should use **~70% of your RAM** to leave room for macOS and the KV cache.
 
-| RAM | Recommended Model | Params | Quant | ~RAM Usage | Why |
-|-----|-------------------|--------|-------|------------|-----|
-| **8 GB** | `mlx-community/Qwen2.5-Coder-3B-Instruct-4bit` | 3B dense | 4-bit | ~2.5 GB | Best coding-specific model at this size. Fast (~35 tok/s). |
-| **16 GB** | `mlx-community/Qwen2.5-Coder-7B-Instruct-4bit` | 7B dense | 4-bit | ~4.5 GB | Dedicated coding model; outperforms general-purpose 8B models on code. |
-| **24 GB** | `mlx-community/Gemma-4-26b-a4b-it-4bit` | 26B MoE (4B active) | 4-bit | ~15 GB | Top local coding model per independent benchmarks. Rock-solid compilation rate. |
-| **32 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-4bit` | 32B dense | 4-bit | ~18.5 GB | Gold standard for local coding. Purpose-built, quantization barely hurts quality. |
-| **48 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-8bit` | 32B dense | 8-bit | ~34 GB | Same gold standard at near-lossless 8-bit. Room for large context windows. |
-| **64 GB** | `mlx-community/Qwen3-Coder-Next-8bit` | 80B MoE (3B active) | 8-bit | ~45 GB | 80B-knowledge coding specialist at high fidelity. 256K context. Default model. |
-| **96 GB** | `mlx-community/Devstral-2-123B-Instruct-2512-4bit` | 123B dense | 4-bit | ~65 GB | Mistral's full-size coding agent. 72.2% SWE-Bench Verified. |
-| **128 GB** | `mlx-community/Devstral-2-123B-Instruct-2512-8bit` | 123B dense | 8-bit | ~90 GB | Same model at near-lossless 8-bit. Maximum coding quality you can run locally. |
+| RAM | Recommended Model | Params | Quant | ~Size | Comparable to | Benchmark basis |
+|-----|-------------------|--------|-------|-------|---------------|-----------------|
+| **8 GB** | `mlx-community/Qwen2.5-Coder-3B-Instruct-4bit` | 3B dense | 4-bit | ~2.5 GB | GPT-3.5 Turbo (older) | Aider Edit: ~39% vs GPT-3.5's ~50% |
+| **16 GB** | `mlx-community/Qwen2.5-Coder-7B-Instruct-4bit` | 7B dense | 4-bit | ~4.5 GB | GPT-4o-mini | Aider Edit: ~58% vs 4o-mini's 56% |
+| **24 GB** | `mlx-community/Gemma-4-26b-a4b-it-4bit` | 26B MoE (4B active) | 4-bit | ~15 GB | GPT-4o (code gen) | HumanEval: 88% vs GPT-4o's ~87%; LiveCodeBench: 77% |
+| **32 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-4bit` | 32B dense | 4-bit | ~18.5 GB | GPT-4o (editing) | Aider Edit: 71% vs GPT-4o's 73% |
+| **48 GB** | `mlx-community/Qwen2.5-Coder-32B-Instruct-8bit` | 32B dense | 8-bit | ~34 GB | GPT-4o (near-lossless) | Same model, 8-bit ~= full precision on MLX |
+| **64 GB** | `mlx-community/Qwen3-Coder-Next-8bit` | 80B MoE (3B active) | 8-bit | ~45 GB | Claude 3.5 Sonnet (Oct '24) | Aider Polyglot: 50% vs Sonnet 3.5's 52%; SWE-bench: 71-74% |
+| **96 GB** | `mlx-community/Devstral-2-123B-Instruct-2512-4bit` | 123B dense | 4-bit | ~65 GB | GPT-4.1 / Claude 3.5 Sonnet | SWE-bench Verified: ~70% (4-bit) |
+| **128 GB** | `mlx-community/Devstral-2-123B-Instruct-2512-8bit` | 123B dense | 8-bit | ~90 GB | Claude Sonnet 4 (no thinking) | SWE-bench Verified: 72.2% vs Sonnet 4's 56% (no think) |
+
+### How to read the "Comparable to" column
+
+These comparisons are based on **raw benchmark scores** (Aider Polyglot, SWE-bench Verified, HumanEval). They indicate the commercial model your local model performs closest to **on standardized coding benchmarks**. The actual experience may be better -- see the section on [harness boost](#the-harness-boost-why-your-local-model-will-punch-above-its-weight) below.
 
 ### Runner-up picks
 
@@ -88,6 +92,29 @@ claude-local -m mlx-community/Gemma-4-26b-a4b-it-4bit
 ```
 
 Models are downloaded from HuggingFace on first use and cached in `~/.cache/huggingface/`.
+
+## The harness boost: why your local model will punch above its weight
+
+Most coding benchmarks (Aider, SWE-bench, HumanEval) test models with **basic scaffolding** -- a simple loop of "read prompt, generate code, check." But Claude Code is a **modern agentic harness**: it has tool use, file editing, shell access, retry logic, multi-step planning, and context management.
+
+Research shows that the harness matters **more than the model** at the frontier:
+
+| Study | Same model, basic scaffold | Same model, optimized scaffold | Improvement |
+|-------|---------------------------|-------------------------------|-------------|
+| Claude Opus 4.5 on CORE-Bench | 42% | 78% (with Claude Code) | **+36 points** |
+| LangChain coding agent | 52.8% | 66.5% | **+14 points** |
+| SWE-bench Pro analysis | ~1 pt difference from model swaps | ~22 pt difference from scaffold swaps | **Scaffold >> Model** |
+
+*Source: [Agent Scaffolding Beats Model Upgrades (Particula)](https://particula.tech/blog/agent-scaffolding-beats-model-upgrades-swe-bench)*
+
+**What this means for you:** The benchmark scores above were measured with **basic harnesses from 2024-2025**. Claude Code's agentic capabilities (tool use, iterative editing, error recovery) can boost effective performance by **15-35 points** compared to those benchmarks.
+
+In practice:
+- A **Qwen2.5-Coder-32B** that benchmarks like GPT-4o in isolation can perform closer to **Claude 3.5 Sonnet** when harnessed by Claude Code
+- A **Qwen3-Coder-Next** that benchmarks like Claude 3.5 Sonnet can approach **Claude Sonnet 4** territory with proper agentic scaffolding
+- A **Devstral-2-123B** that benchmarks near Claude Sonnet 4 can punch into **frontier-class** effectiveness
+
+The model provides the intelligence; the harness multiplies it. You're getting both.
 
 ## Why MLX over Ollama?
 
@@ -171,9 +198,12 @@ Use the [model table](#recommended-models-by-ram) to pick one that fits your mac
 
 ## Benchmark sources
 
-- [Aider LLM Leaderboards](https://aider.chat/docs/leaderboards/)
+- [Aider LLM Leaderboards](https://aider.chat/docs/leaderboards/) -- Polyglot (hard) and Edit (easy) benchmarks
+- [Aider Polyglot on llm-stats](https://llm-stats.com/benchmarks/aider-polyglot) -- aggregated scores
+- [SWE-bench Verified Leaderboard](https://www.swebench.com/) -- real-world GitHub issue resolution
 - [Gemma 4 vs Qwen3.5 Local Coding Benchmark](https://msf.github.io/blogpost/local-llm-coding-harder-test.html)
 - [Qwen3.5 Apple Silicon Benchmark (MLX vs Ollama vs llama.cpp)](https://antekapetanovic.com/blog/qwen3.5-apple-silicon-benchmark/)
+- [Agent Scaffolding Beats Model Upgrades (Particula)](https://particula.tech/blog/agent-scaffolding-beats-model-upgrades-swe-bench)
 - [Ollama MLX Backend Announcement](https://ollama.com/blog/mlx)
 - [Qwen2.5-Coder Quantization Study on MLX](https://medium.com/@ivanfioravanti/qwen-2-5-coder-quantization-does-not-matter-aider-benchmarks-on-apple-mlx-671e6bd5252a)
 - [Apple Silicon LLM Optimization Guide](https://blog.starmorph.com/blog/apple-silicon-llm-inference-optimization-guide)
